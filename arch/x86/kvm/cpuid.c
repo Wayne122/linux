@@ -1019,16 +1019,58 @@ out:
 }
 EXPORT_SYMBOL_GPL(kvm_cpuid);
 
+u32 exit_counters[54] = {0};
+u64 exit_timers[54] = {0};
+EXPORT_SYMBOL(exit_counters);
+EXPORT_SYMBOL(exit_timers);
+
 int kvm_emulate_cpuid(struct kvm_vcpu *vcpu)
 {
 	u32 eax, ebx, ecx, edx;
+	u64 tmp = 0;
+	int i;
+	int max_exits = 54;
 
 	if (cpuid_fault_enabled(vcpu) && !kvm_require_cpl(vcpu, 0))
 		return 1;
 
 	eax = kvm_rax_read(vcpu);
 	ecx = kvm_rcx_read(vcpu);
-	kvm_cpuid(vcpu, &eax, &ebx, &ecx, &edx, true);
+	switch (eax) {
+	case 0x4FFFFFFF:
+		eax = 0;
+		for (i = 0; i < max_exits; i++) eax += exit_counters[i];
+		break;
+	case 0x4FFFFFFE:
+		for (i = 0; i < max_exits; i++) tmp += exit_timers[i];
+		ebx = tmp>>32;
+		ecx = tmp;
+		break;
+	case 0x4FFFFFFD:
+		if (ecx < max_exits) eax = exit_counters[ecx];
+		else {
+			eax = 0;
+			ebx = 0;
+			ecx = 0;
+			edx = -1;
+		}
+		break;
+	case 0x4FFFFFFC:
+		if (ecx < max_exits) {
+			ebx = exit_timers[ecx]>>32;
+			ecx = exit_timers[ecx];
+		}
+		else {
+			eax = 0;
+			ebx = 0;
+			ecx = 0;
+			edx = -1;
+		}
+		break;
+	default:
+		kvm_cpuid(vcpu, &eax, &ebx, &ecx, &edx, true);
+		break;
+	}
 	kvm_rax_write(vcpu, eax);
 	kvm_rbx_write(vcpu, ebx);
 	kvm_rcx_write(vcpu, ecx);

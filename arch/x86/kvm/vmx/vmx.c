@@ -5859,6 +5859,9 @@ static int vmx_handle_exit(struct kvm_vcpu *vcpu)
 	u32 exit_reason = vmx->exit_reason;
 	u32 vectoring_info = vmx->idt_vectoring_info;
 
+	extern u32 exit_counters[54];
+	extern u64 exit_timers[54];
+
 	trace_kvm_exit(exit_reason, vcpu, KVM_ISA_VMX);
 
 	/*
@@ -5940,8 +5943,14 @@ static int vmx_handle_exit(struct kvm_vcpu *vcpu)
 	}
 
 	if (exit_reason < kvm_vmx_max_exit_handlers
-	    && kvm_vmx_exit_handlers[exit_reason])
-		return kvm_vmx_exit_handlers[exit_reason](vcpu);
+	    && kvm_vmx_exit_handlers[exit_reason]) {
+		exit_counters[exit_reason]++;
+		u64 start;
+		start = rdtsc();
+		int ret = kvm_vmx_exit_handlers[exit_reason](vcpu);
+		exit_timers[exit_reason] += (rdtsc() - start);
+		return ret;
+	}
 	else {
 		vcpu_unimpl(vcpu, "vmx: unexpected exit reason 0x%x\n",
 				exit_reason);
