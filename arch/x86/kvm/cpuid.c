@@ -1019,17 +1019,89 @@ out:
 }
 EXPORT_SYMBOL_GPL(kvm_cpuid);
 
-u32 exit_counters[54] = {0};
-u64 exit_timers[54] = {0};
+u32 exit_counters[69] = {0};
+u64 exit_timers[69] = {0};
 EXPORT_SYMBOL(exit_counters);
 EXPORT_SYMBOL(exit_timers);
+
+static bool implemented[] = {
+	[0]	= true,
+	[1]	= true,
+	[2]	= true,
+	[3]	= false,
+	[4]	= false,
+	[5]	= false,
+	[6]	= false,
+	[7]	= true,
+	[8]	= true,
+	[9]	= true,
+	[10]	= true,
+	[11]	= false,
+	[12]	= true,
+	[13]	= true,
+	[14]	= true,
+	[15]	= true,
+	[16]	= false,
+	[17]	= false,
+	[18]	= true,
+	[19]	= true,
+	[20]	= true,
+	[21]	= true,
+	[22]	= true,
+	[23]	= true,
+	[24]	= true,
+	[25]	= true,
+	[26]	= true,
+	[27]	= true,
+	[28]	= true,
+	[29]	= true,
+	[30]	= true,
+	[31]	= true,
+	[32]	= true,
+	[33]	= false,
+	[34]	= false,
+	[35]	= false,
+	[36]	= true,
+	[37]	= true,
+	[38]	= false,
+	[39]	= true,
+	[40]	= true,
+	[41]	= true,
+	[42]	= false,
+	[43]	= true,
+	[44]	= true,
+	[45]	= true,
+	[46]	= true,
+	[47]	= true,
+	[48]	= true,
+	[49]	= true,
+	[50]	= true,
+	[51]	= false,
+	[52]	= true,
+	[53]	= true,
+	[54]	= true,
+	[55]	= true,
+	[56]	= true,
+	[57]	= true,
+	[58]	= true,
+	[59]	= true,
+	[60]	= true,
+	[61]	= true,
+	[62]	= true,
+	[63]	= true,
+	[64]	= true,
+	[65]	= false,
+	[66]	= false,
+	[67]	= true,
+	[68]	= true,
+};
 
 int kvm_emulate_cpuid(struct kvm_vcpu *vcpu)
 {
 	u32 eax, ebx, ecx, edx;
 	u64 tmp = 0;
 	int i;
-	int max_exits = 54;
+	int max_exits = 69;
 
 	if (cpuid_fault_enabled(vcpu) && !kvm_require_cpl(vcpu, 0))
 		return 1;
@@ -1047,31 +1119,28 @@ int kvm_emulate_cpuid(struct kvm_vcpu *vcpu)
 		ecx = tmp;
 		break;
 	case 0x4FFFFFFD:
-		if (ecx < max_exits) {
+		if (ecx < max_exits && implemented[ecx]) {
 			eax = exit_counters[ecx];
-			ebx = 0;
-			ecx = 0;
-			edx = 0;
 		}
 		else {
+			if (ecx < max_exits && ecx != 35 && ecx != 38 && ecx != 42) edx = 0;
+			else edx = -1;
 			eax = 0;
 			ebx = 0;
 			ecx = 0;
-			edx = -1;
 		}
 		break;
 	case 0x4FFFFFFC:
-		if (ecx < max_exits) {
-			eax = 0;
+		if (ecx < max_exits && implemented[ecx]) {
 			ebx = exit_timers[ecx]>>32;
 			ecx = exit_timers[ecx];
-			edx = 0;
 		}
 		else {
+			if (ecx < max_exits && ecx != 35 && ecx != 38 && ecx != 42) edx = 0;
+			else edx = -1;
 			eax = 0;
 			ebx = 0;
 			ecx = 0;
-			edx = -1;
 		}
 		break;
 	default:
