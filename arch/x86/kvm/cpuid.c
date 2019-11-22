@@ -1119,9 +1119,7 @@ int kvm_emulate_cpuid(struct kvm_vcpu *vcpu)
 		ecx = tmp;
 		break;
 	case 0x4FFFFFFD:
-		if (ecx < max_exits && implemented[ecx]) {
-			eax = exit_counters[ecx];
-		}
+		if (ecx < max_exits && implemented[ecx]) eax = exit_counters[ecx];
 		else {
 			if (ecx < max_exits && ecx != 35 && ecx != 38 && ecx != 42) edx = 0;
 			else edx = -1;
